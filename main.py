@@ -1,6 +1,6 @@
 import sys
 
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtGui import QPixmap, QAction
 from PySide6.QtWidgets import (
     QApplication,
@@ -14,43 +14,104 @@ class PetWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Remove normal Windows frame and keep the pet above other windows.
+        # -------------------------
+        # Window setup
+        # -------------------------
+
         self.setWindowFlags(
             Qt.FramelessWindowHint
             | Qt.WindowStaysOnTopHint
             | Qt.Tool
         )
 
-        # Make the window background transparent.
         self.setAttribute(Qt.WA_TranslucentBackground)
 
-        # ----- Pet image -----
-        self.pet_label = QLabel(self)
+        # -------------------------
+        # Load idle sprite sheet
+        # -------------------------
 
-        path = "assets/kate.png"
-        pixmap = QPixmap(path)
-
-        if pixmap.isNull():
-            raise FileNotFoundError(f"Could not load {path}")
-
-        # Resize while preserving proportions.
-        pixmap = pixmap.scaled(
-            200,
-            200,
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation,
+        self.sprite_sheet = QPixmap(
+            "assets/cat/idle/Cat-2-Idle.png"
         )
 
-        self.pet_label.setPixmap(pixmap)
-        self.pet_label.resize(pixmap.size())
+        if self.sprite_sheet.isNull():
+            raise FileNotFoundError(
+                "Could not load idle sprite sheet."
+            )
 
-        # Make the actual window exactly the size of the pet.
-        self.resize(pixmap.size())
+        self.frame_count = 10
 
-        # Used when dragging the pet.
+        self.frame_width = (
+            self.sprite_sheet.width() // self.frame_count
+        )
+
+        self.frame_height = self.sprite_sheet.height()
+
+        print("Sprite sheet size:",
+              self.sprite_sheet.width(),
+              "x",
+              self.sprite_sheet.height())
+
+        print("Individual frame size:",
+              self.frame_width,
+              "x",
+              self.frame_height)
+
+        # -------------------------
+        # Pet label
+        # -------------------------
+
+        self.pet_label = QLabel(self)
+
+        self.current_frame = 0
+
+        # Scale factor
+        self.display_scale = 3
+
+        self.display_width = (
+            self.frame_width * self.display_scale
+        )
+
+        self.display_height = (
+            self.frame_height * self.display_scale
+        )
+
+        self.pet_label.resize(
+            self.display_width,
+            self.display_height
+        )
+
+        self.resize(
+            self.display_width,
+            self.display_height
+        )
+
+        # -------------------------
+        # Animation timer
+        # -------------------------
+
+        self.animation_timer = QTimer(self)
+
+        self.animation_timer.timeout.connect(
+            self.next_frame
+        )
+
+        # 100 ms = 10 FPS
+        self.animation_timer.start(100)
+
+        # Draw first frame
+        self.show_frame()
+
+        # -------------------------
+        # Dragging
+        # -------------------------
+
         self.drag_position = QPoint()
 
-        # Start near the bottom-right corner.
+        # -------------------------
+        # Starting position
+        # -------------------------
+
         screen = QApplication.primaryScreen().availableGeometry()
 
         x = screen.right() - self.width() - 30
@@ -58,12 +119,47 @@ class PetWindow(QWidget):
 
         self.move(x, y)
 
-    # -------------------------
-    # Dragging
-    # -------------------------
+    # =========================
+    # ANIMATION
+    # =========================
+
+    def show_frame(self):
+
+        x = self.current_frame * self.frame_width
+
+        frame = self.sprite_sheet.copy(
+            x,
+            0,
+            self.frame_width,
+            self.frame_height
+        )
+
+        frame = frame.scaled(
+            self.display_width,
+            self.display_height,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+
+        self.pet_label.setPixmap(frame)
+
+    def next_frame(self):
+
+        self.current_frame += 1
+
+        if self.current_frame >= self.frame_count:
+            self.current_frame = 0
+
+        self.show_frame()
+
+    # =========================
+    # DRAGGING
+    # =========================
 
     def mousePressEvent(self, event):
+
         if event.button() == Qt.LeftButton:
+
             self.drag_position = (
                 event.globalPosition().toPoint()
                 - self.frameGeometry().topLeft()
@@ -72,7 +168,9 @@ class PetWindow(QWidget):
             event.accept()
 
     def mouseMoveEvent(self, event):
+
         if event.buttons() & Qt.LeftButton:
+
             self.move(
                 event.globalPosition().toPoint()
                 - self.drag_position
@@ -80,15 +178,19 @@ class PetWindow(QWidget):
 
             event.accept()
 
-    # -------------------------
-    # Right-click menu
-    # -------------------------
+    # =========================
+    # RIGHT CLICK MENU
+    # =========================
 
     def contextMenuEvent(self, event):
+
         menu = QMenu(self)
 
         quit_action = QAction("Quit", self)
-        quit_action.triggered.connect(QApplication.quit)
+
+        quit_action.triggered.connect(
+            QApplication.quit
+        )
 
         menu.addAction(quit_action)
 
@@ -96,9 +198,11 @@ class PetWindow(QWidget):
 
 
 def main():
+
     app = QApplication(sys.argv)
 
     pet = PetWindow()
+
     pet.show()
 
     sys.exit(app.exec())
