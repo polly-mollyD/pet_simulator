@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from src.animation import AnimationPlayer
 from src.controller import PetController
 from src.states import PetState
+import random
 
 
 class PetWindow(QWidget):
@@ -81,6 +82,10 @@ class PetWindow(QWidget):
         y = screen.bottom() - self.height() - 30
 
         self.move(x, y)
+
+        self.state_timer = QTimer(self)
+        self.state_timer.timeout.connect(self.choose_random_state)
+        self.state_timer.start(5000)
 
     # =========================
     # DRAGGING
@@ -162,3 +167,13 @@ class PetWindow(QWidget):
             self.animation.display_width,
             self.animation.display_height,
         )
+
+    def choose_random_state(self):
+        states = [
+            PetState.IDLE,
+            PetState.WALK,
+            PetState.SIT,
+        ]
+
+        next_state = random.choice(states)
+        self.change_state(next_state)
