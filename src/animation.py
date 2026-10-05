@@ -1,9 +1,10 @@
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Qt
+from PySide6.QtCore import QObject, QTimer, Qt, Signal
 from PySide6.QtGui import QPixmap
 
 class AnimationPlayer(QObject):
+    animation_finished = Signal()
 
     def __init__(self, label, scale=3):
         super().__init__()
@@ -27,6 +28,8 @@ class AnimationPlayer(QObject):
         sprite_path,
         frame_count,
         frame_duration=100,
+        loop=True,
+        reverse=False,
     ):
         """
         Start playing a sprite-sheet animation.
@@ -50,8 +53,10 @@ class AnimationPlayer(QObject):
                 f"Could not load sprite sheet: {sprite_path}"
             )
 
+        self.loop = loop
         self.frame_count = frame_count
         self.current_frame = 0
+        self.reverse = reverse
 
         self.frame_width = (
             self.sprite_sheet.width() // frame_count
@@ -73,6 +78,9 @@ class AnimationPlayer(QObject):
 
         x = self.current_frame * self.frame_width
 
+        if self.reverse:
+            x = (self.frame_count - 1 - self.current_frame) * self.frame_width
+
         frame = self.sprite_sheet.copy(
             x,
             0,
@@ -89,12 +97,17 @@ class AnimationPlayer(QObject):
 
         self.label.setPixmap(frame)
 
+
     def next_frame(self):
-
-        self.current_frame += 1
-
-        if self.current_frame >= self.frame_count:
-            self.current_frame = 0
+        if self.current_frame == self.frame_count - 1:
+            if self.loop:
+                self.current_frame = 0
+            else:
+                self.timer.stop()
+                self.animation_finished.emit()
+                return
+        else:
+            self.current_frame += 1
 
         self.show_frame()
 

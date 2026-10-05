@@ -87,6 +87,8 @@ class PetWindow(QWidget):
         self.state_timer.timeout.connect(self.choose_random_state)
         self.state_timer.start(5000)
 
+        self.animation.animation_finished.connect(self.on_animation_finished)
+
     # =========================
     # DRAGGING
     # =========================
@@ -159,6 +161,7 @@ class PetWindow(QWidget):
 
         menu.exec(event.globalPos())
 
+
     def change_state(self, state):
 
         self.controller.set_state(state)
@@ -168,11 +171,42 @@ class PetWindow(QWidget):
             self.animation.display_height,
         )
 
+        if state in (PetState.LAY, PetState.WAKE_UP):
+            self.state_timer.stop()
+        elif state in (PetState.SLEEP1, PetState.SLEEP2):
+            self.state_timer.start(15000)
+        else:
+            self.state_timer.start(5000)
+
+
+    def on_animation_finished(self):
+        if self.controller.state == PetState.LAY:
+            sleep_state = random.choice([
+                PetState.SLEEP1,
+                PetState.SLEEP2,
+            ])
+            self.change_state(sleep_state)
+
+        elif self.controller.state in (PetState.WAKE_UP, PetState.STRETCH):
+            self.change_state(PetState.IDLE)
+
+
     def choose_random_state(self):
+        if self.controller.state in (PetState.SLEEP1, PetState.SLEEP2):
+            self.change_state(PetState.WAKE_UP)
+            return
+
         states = [
             PetState.IDLE,
             PetState.WALK,
             PetState.SIT,
+            PetState.LAY,
+            PetState.ITCH,
+            PetState.STRETCH,
+            PetState.MEOW,
+            PetState.RUN,
+            PetState.LICK1,
+            PetState.LICK2,
         ]
 
         next_state = random.choice(states)
