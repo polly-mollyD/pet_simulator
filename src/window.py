@@ -89,6 +89,10 @@ class PetWindow(QWidget):
 
         self.animation.animation_finished.connect(self.on_animation_finished)
 
+        self.movement_timer = QTimer(self)
+        self.movement_timer.timeout.connect(self.move_pet)
+        self.movement_timer.start(30)
+
     # =========================
     # DRAGGING
     # =========================
@@ -176,7 +180,31 @@ class PetWindow(QWidget):
         elif state in (PetState.SLEEP1, PetState.SLEEP2):
             self.state_timer.start(15000)
         else:
-            self.state_timer.start(5000)
+            durations = {
+                PetState.MEOW: 2000,
+                PetState.RUN: 3000,
+                PetState.WALK: 5000,
+            }
+            self.state_timer.start(durations.get(state, 5000))
+
+
+    def move_pet(self):
+        if self.controller.state == PetState.WALK:
+            speed = 2
+        elif self.controller.state == PetState.RUN:
+            speed = 4
+        else:
+            return
+
+        screen = self.screen().availableGeometry()
+        right_limit = screen.right() + 1 - self.width()
+
+        next_x = min(self.x() + speed, right_limit)
+        self.move(next_x, self.y())
+
+        if next_x >= right_limit:
+            self.change_state(PetState.IDLE)
+
 
 
     def on_animation_finished(self):
