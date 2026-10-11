@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Qt, Signal
-from PySide6.QtGui import QPixmap, QTransform
+from PySide6.QtGui import QPixmap, QTransform, QPainter
 
 class AnimationPlayer(QObject):
     animation_finished = Signal()
@@ -31,6 +31,7 @@ class AnimationPlayer(QObject):
         frame_duration=100,
         loop=True,
         reverse=False,
+        effect_path=None,
     ):
         """
         Start playing a sprite-sheet animation.
@@ -69,6 +70,7 @@ class AnimationPlayer(QObject):
             self.frame_width * self.scale,
             self.frame_height * self.scale,
         )
+        self.effect_sheet = QPixmap(effect_path) if effect_path else None
 
         self.show_frame()
 
@@ -88,6 +90,14 @@ class AnimationPlayer(QObject):
             self.frame_width,
             self.frame_height,
         )
+
+        if self.effect_sheet is not None and self.current_frame > 0:
+            effect_index = (self.current_frame - 1) % 3
+            effect = self.effect_sheet.copy(effect_index * 16, 0, 16, 16)
+
+            painter = QPainter(frame)
+            painter.drawPixmap(34, 18, effect)
+            painter.end()
 
         frame = frame.scaled(
             self.frame_width * self.scale,

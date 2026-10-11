@@ -90,6 +90,7 @@ class PetController:
                 frame_count=4,
                 frame_duration=120,
                 loop=True,
+                effect_path="assets/cat/meow/Meow-VFX.png",
             )
 
         elif new_state == PetState.LICK1:

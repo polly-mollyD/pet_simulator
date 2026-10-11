@@ -1,10 +1,11 @@
 from PySide6.QtCore import Qt, QPoint, QTimer
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QMenu,
     QWidget,
+    QSystemTrayIcon
 )
 from src.state_config import STATE_CONFIG
 from src.animation import AnimationPlayer
@@ -93,6 +94,18 @@ class PetWindow(QWidget):
         self.movement_timer.timeout.connect(self.move_pet)
         self.movement_timer.start(30)
 
+
+        self.tray_menu = QMenu(self)
+
+        quit_action = self.tray_menu.addAction("Quit")
+        quit_action.triggered.connect(QApplication.quit)
+
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon(self.pet_label.pixmap()))
+        self.tray_icon.setToolTip("Desktop Pet")
+        self.tray_icon.setContextMenu(self.tray_menu)
+        self.tray_icon.show()
+
     # =========================
     # DRAGGING
     # =========================
@@ -118,52 +131,6 @@ class PetWindow(QWidget):
             )
 
             event.accept()
-
-    # =========================
-    # RIGHT CLICK MENU
-    # =========================
-
-    def contextMenuEvent(self, event):
-
-        menu = QMenu(self)
-
-        idle_action = QAction("Idle", self)
-        walk_action = QAction("Walk", self)
-        sit_action = QAction("Sit", self)
-
-        quit_action = QAction("Quit", self)
-
-        idle_action.triggered.connect(
-            lambda: self.change_state(
-                PetState.IDLE
-            )
-        )
-
-        walk_action.triggered.connect(
-            lambda: self.change_state(
-                PetState.WALK
-            )
-        )
-
-        sit_action.triggered.connect(
-            lambda: self.change_state(
-                PetState.SIT
-            )
-        )
-
-        quit_action.triggered.connect(
-            QApplication.quit
-        )
-
-        menu.addAction(idle_action)
-        menu.addAction(walk_action)
-        menu.addAction(sit_action)
-
-        menu.addSeparator()
-
-        menu.addAction(quit_action)
-
-        menu.exec(event.globalPos())
 
 
     def change_state(self, state):
