@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QWidget,
 )
-
+from src.state_config import STATE_CONFIG
 from src.animation import AnimationPlayer
 from src.controller import PetController
 from src.states import PetState
@@ -85,7 +85,7 @@ class PetWindow(QWidget):
 
         self.state_timer = QTimer(self)
         self.state_timer.timeout.connect(self.choose_random_state)
-        self.state_timer.start(5000)
+        self.state_timer.start(STATE_CONFIG[PetState.IDLE]["duration"])
 
         self.animation.animation_finished.connect(self.on_animation_finished)
 
@@ -175,35 +175,33 @@ class PetWindow(QWidget):
             self.animation.display_height,
         )
 
-        if state in (PetState.LAY, PetState.WAKE_UP):
+        duration = STATE_CONFIG[state]["duration"]
+
+        if duration is None:
             self.state_timer.stop()
-        elif state in (PetState.SLEEP1, PetState.SLEEP2):
-            self.state_timer.start(15000)
         else:
-            durations = {
-                PetState.MEOW: 2000,
-                PetState.RUN: 3000,
-                PetState.WALK: 5000,
-            }
-            self.state_timer.start(durations.get(state, 5000))
+            self.state_timer.start(duration)
 
 
     def move_pet(self):
-        if self.controller.state == PetState.WALK:
-            speed = 2
-        elif self.controller.state == PetState.RUN:
-            speed = 4
-        else:
+        if QApplication.mouseButtons() & Qt.LeftButton:
             return
-
+        
+        speed = STATE_CONFIG[self.controller.state].get("speed", 0)
+        if speed == 0:
+            return
+        
         screen = self.screen().availableGeometry()
-        right_limit = screen.right() + 1 - self.width()
+        left = screen.left()
+        right = screen.right() + 1 - self.width()
 
-        next_x = min(self.x() + speed, right_limit)
-        self.move(next_x, self.y())
+        x = self.x() + speed * self.animation.direction
 
-        if next_x >= right_limit:
-            self.change_state(PetState.IDLE)
+        if x <= left or x >= right:
+            self.animation.direction *= -1
+            self.animation.show_frame()
+
+        self.move(max(left, min(x, right)), self.y())
 
 
 
@@ -224,18 +222,10 @@ class PetWindow(QWidget):
             self.change_state(PetState.WAKE_UP)
             return
 
-        states = [
-            PetState.IDLE,
-            PetState.WALK,
-            PetState.SIT,
-            PetState.LAY,
-            PetState.ITCH,
-            PetState.STRETCH,
-            PetState.MEOW,
-            PetState.RUN,
-            PetState.LICK1,
-            PetState.LICK2,
-        ]
+        states = list(STATE_CONFIG)
 
-        next_state = random.choice(states)
+        next_state = random.choice([
+            state for state in states
+            for _ in range(STATE_CONFIG[state]["probability"])
+        ])
         self.change_state(next_state)

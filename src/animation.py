@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Qt, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QTransform
 
 class AnimationPlayer(QObject):
     animation_finished = Signal()
@@ -11,6 +11,7 @@ class AnimationPlayer(QObject):
 
         self.label = label
         self.scale = scale
+        self.direction = 1
 
         self.sprite_sheet = None
 
@@ -95,6 +96,8 @@ class AnimationPlayer(QObject):
             Qt.SmoothTransformation,
         )
 
+        if self.direction == -1:
+            frame = frame.transformed(QTransform().scale(-1, 1))
         self.label.setPixmap(frame)
 
 
