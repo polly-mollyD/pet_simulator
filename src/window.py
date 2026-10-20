@@ -11,6 +11,7 @@ from src.state_config import STATE_CONFIG
 from src.animation import AnimationPlayer
 from src.controller import PetController
 from src.states import PetState
+from src.chat_window import ChatWindow
 import random
 
 
@@ -18,6 +19,11 @@ class PetWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.chat_window = ChatWindow()
+
+        QApplication.instance().aboutToQuit.connect(
+            self.chat_window.wait_for_reply
+        )
 
         # -------------------------
         # Window setup
@@ -109,6 +115,16 @@ class PetWindow(QWidget):
     # =========================
     # DRAGGING
     # =========================
+
+    def open_chat(self):
+        self.chat_window.show()
+        self.chat_window.raise_()
+        self.chat_window.activateWindow()
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.open_chat()
+            event.accept()
 
     def mousePressEvent(self, event):
 
