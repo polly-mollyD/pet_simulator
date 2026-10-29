@@ -1,3 +1,4 @@
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -5,7 +6,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
 )
-import time
+from src.ai_client import generate_reply
 
 from PySide6.QtCore import QThread, Signal
 
@@ -13,17 +14,19 @@ from PySide6.QtCore import QThread, Signal
 
 class ReplyWorker(QThread):
     reply_ready = Signal(str)
+    reply_failed = Signal(str)
 
-    def __init__(self, message, parent=None):
+    def __init__(self, messages, parent=None):
         super().__init__(parent)
-        self.message = message
+        self.messages = [message.copy() for message in messages]
 
     def run(self):
-        time.sleep(3)
-
-        reply = f'Meow! You said: "{self.message}"'
-        self.reply_ready.emit(reply)
-
+        try:
+            reply = generate_reply(self.messages)
+        except Exception as error:
+            self.reply_failed.emit(str(error))
+        else:
+            self.reply_ready.emit(reply)
 
 
 class ChatWindow(QWidget):
@@ -51,6 +54,16 @@ class ChatWindow(QWidget):
         self.send_button.clicked.connect(self.send_message)
         self.message_input.returnPressed.connect(self.send_message)
 
+        self.messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a friendly desktop cat companion. "
+                    "Give helpful, concise answers with a playful personality."
+                ),
+            }
+        ]
+
 
     def send_message(self):
         if self.worker is not None:
@@ -67,16 +80,32 @@ class ChatWindow(QWidget):
         self.send_button.setEnabled(False)
         self.message_input.setEnabled(False)
 
-        self.worker = ReplyWorker(message, self)
+        self.messages.append({
+            "role": "user",
+            "content": message,
+        })
+        self.worker = ReplyWorker(self.messages, self)
 
         self.worker.reply_ready.connect(self.receive_reply)
+        self.worker.reply_failed.connect(self.receive_error)
         self.worker.finished.connect(self.finish_reply)
 
         self.worker.start()
 
 
     def receive_reply(self, reply):
+        self.messages.append({
+            "role": "assistant",
+            "content": reply,
+        })
         self.add_message("Cat", reply)
+
+
+    def receive_error(self, error):
+        failed_message = self.messages.pop()
+
+        self.add_message("Error", error)
+        self.message_input.setText(failed_message["content"])
 
 
     def finish_reply(self):
