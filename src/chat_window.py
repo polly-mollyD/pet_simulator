@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QTextBrowser,
     QLineEdit,
     QPushButton,
+    QLabel,
+    QHBoxLayout
 )
 from src.ai_client import generate_reply
 
@@ -37,19 +39,36 @@ class ChatWindow(QWidget):
         self.worker = None
 
         self.setWindowTitle("Chat with your cat")
-        self.resize(300, 400)
+        self.resize(420, 520)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
 
+        # Heading at the top
+        title = QLabel("Chat with your cat")
+        title.setObjectName("chatTitle")
+        layout.addWidget(title)
+
+        # Conversation in the middle
         self.conversation = QTextBrowser()
-        layout.addWidget(self.conversation)
+        layout.addWidget(self.conversation, 1)
 
+        # Message input and button at the bottom
         self.message_input = QLineEdit()
-        self.message_input.setPlaceholderText("Ask your cat something...")
-        layout.addWidget(self.message_input)
+        self.message_input.setPlaceholderText(
+            "Ask your cat something..."
+        )
 
         self.send_button = QPushButton("Send")
-        layout.addWidget(self.send_button)
+
+        input_layout = QHBoxLayout()
+        input_layout.setSpacing(8)
+        input_layout.addWidget(self.message_input, 1)
+        input_layout.addWidget(self.send_button)
+
+        layout.addLayout(input_layout)
+
 
         self.send_button.clicked.connect(self.send_message)
         self.message_input.returnPressed.connect(self.send_message)
@@ -63,6 +82,58 @@ class ChatWindow(QWidget):
                 ),
             }
         ]
+
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #181825;
+                color: #cdd6f4;
+                font-family: "Segoe UI";
+                font-size: 14px;
+            }
+
+            QLabel#chatTitle {
+                font-size: 20px;
+                font-weight: bold;
+                padding-bottom: 4px;
+            }
+
+            QTextBrowser {
+                background-color: #1e1e2e;
+                border: 1px solid #45475a;
+                border-radius: 12px;
+                padding: 12px;
+            }
+
+            QLineEdit {
+                background-color: #313244;
+                border: 1px solid #45475a;
+                border-radius: 10px;
+                padding: 10px;
+                selection-background-color: #585b70;
+            }
+
+            QLineEdit:focus {
+                border: 1px solid #cba6f7;
+            }
+
+            QPushButton {
+                background-color: #cba6f7;
+                color: #181825;
+                border: none;
+                border-radius: 10px;
+                padding: 10px 16px;
+                font-weight: bold;
+            }
+
+            QPushButton:hover {
+                background-color: #b4befe;
+            }
+
+            QPushButton:disabled {
+                background-color: #45475a;
+                color: #a6adc8;
+            }
+        """)
 
 
     def send_message(self):
@@ -79,6 +150,7 @@ class ChatWindow(QWidget):
 
         self.send_button.setEnabled(False)
         self.message_input.setEnabled(False)
+        self.send_button.setText("Thinking…")
 
         self.messages.append({
             "role": "user",
@@ -113,6 +185,7 @@ class ChatWindow(QWidget):
         self.worker = None
 
         self.send_button.setEnabled(True)
+        self.send_button.setText("Send")
         self.message_input.setEnabled(True)
         self.message_input.setFocus()
 
