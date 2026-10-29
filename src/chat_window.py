@@ -12,6 +12,9 @@ from src.ai_client import generate_reply
 
 from PySide6.QtCore import QThread, Signal
 
+from PySide6.QtGui import (
+    QColor, QTextBlockFormat, QTextCharFormat, QTextCursor
+)
 
 
 class ReplyWorker(QThread):
@@ -191,8 +194,23 @@ class ChatWindow(QWidget):
 
 
     def add_message(self, speaker, message):
-        self.conversation.append(f"{speaker}:")
-        self.conversation.insertPlainText("\n" + message + "\n")
+        cursor = self.conversation.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+
+        background = QTextBlockFormat()
+        background.setBackground(
+            QColor("#45405a" if speaker == "You" else "#1e1e2e")
+        )
+
+        if not self.conversation.document().isEmpty():
+            cursor.insertBlock()
+
+        cursor.setBlockFormat(background)
+        cursor.setCharFormat(QTextCharFormat())
+        cursor.insertText(f"{speaker}:\n{message}")
+
+        self.conversation.setTextCursor(cursor)
+        self.conversation.ensureCursorVisible()
 
 
     def wait_for_reply(self):
